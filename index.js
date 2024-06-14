@@ -9,11 +9,20 @@ const AWS = require('aws-sdk');
 const PropertiestReader = require('properties-reader');
 const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
+const multer = require('multer');
 
 const app = express();
 
+//properties file 읽어오기
+const properties = PropertiestReader('common.properties');
+
 app.use(cors());
 app.use(bodyParser.json());
+
+const upload = multer({ 
+    dest: 'tmp/',
+    limits: { fileSize: 200 * 1024 * 1024 }
+});
 
 app.get('/listServer', async (req, res) => {
 
@@ -37,11 +46,8 @@ const io = socketIo(server, {
     }
 });
 
-// 서버 목록과 각 서버의 접속 인원을 저장할 객체
-const servers = {};
-
 //mongoDB연결
-const mongoUri = 'mongodb://127.0.0.1:27017/chat'; // 로컬 MongoDB URI
+const mongoUri = 'mongodb://223.130.156.104:27017/chat'; // 로컬 MongoDB URI
 mongoose.connect(mongoUri)
     .then(() => console.log('MongoDB connected'))
     .catch((err) => console.log('MongoDB connection error:', err));
@@ -84,9 +90,6 @@ const port = process.env.port || 3000;
 server.listen(port, () => {
     console.log('server is running on port '+port);
 });
-
-//properties file 읽어오기
-const properties = PropertiestReader('common.properties');
 
 const endpoint = properties.get('storage.endPoint');
 const region = 'kr-standard';
@@ -145,7 +148,7 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', async (data) => {
         //한명이 나감
-        console.log(data);
+        console.log('data : ' + data);
 
          // 클라이언트가 방을 나갈 때 전체 서버의 인원수를 업데이트함
          try {
@@ -205,7 +208,7 @@ io.on('connection', (socket) => {
 
         var uuid = uuidv4();
 
-        const localFilePath = `/tmp/`+uuid;
+        const localFilePath = `tmp/`+uuid;
 
         var key_name = folder_name + '/' + uuid;
 
@@ -319,130 +322,97 @@ io.on('connection', (socket) => {
 
     });
 
-    socket.on('upload_video', async (data) => {
+});
 
-        console.log('upload_video start');
+app.post('/upload', upload.single('video'), async (req, res) => {
 
-        const { fileName, fileData, room, nick} = data;
+    console.log('upload_video');
 
-        var uuid = uuidv4();
+    const file = req.file;
+    const { room, nick, msg } = req.body;
+    const uuid = uuidv4();
+    const localFilePath = file.path;
+    const key_name = 'input' + '/' + uuid;
 
-        const localFilePath = `/tmp/`+uuid;
+    console.log('start uploading to s3');
 
-        var key_name = 'input' + '/' + uuid;
+    try {
 
-        var b_name = 'wewu-chat-test';
-
-        await S3.putObject({
-            Bucket: b_name,
-            Key: 'input'
+        await S3.upload({
+            Bucket: 'wewu-chat-test',
+            Key: key_name,
+            ACL: 'public-read',
+            Body: fs.createReadStream(localFilePath),
+            ContentType: file.mimetype
         }).promise();
 
-        fs.writeFile(localFilePath, fileData, (err) => {
+        console.log('s3 complete');
+
+        fs.unlink(localFilePath, (err) => {
             if (err) {
-                console.error('Error saving file to local file system:', err);
-                // 파일 저장 실패 시 처리
-                return;
+                console.error('Error deleting local file:', err);
             }
-
-            S3.upload({
-                Bucket: b_name,
-                Key: key_name,
-                ACL: 'public-read',
-                Body: fs.createReadStream(localFilePath)
-            }, async (err, s3Data) => {
-                // 로컬 파일 삭제
-                fs.unlink(localFilePath, (unlinkErr) => {
-                    if (unlinkErr) {
-                        console.error('Error deleting local file:', unlinkErr);
-                    }
-                });
-    
-                if (err) {
-                    console.error('File upload failed:', err);
-                    // 업로드 실패 시 처리
-                } else {
-                    console.log('File uploaded:', s3Data.Location);
-                    data.file_url = s3Data.Location;
-
-                    var client_id = properties.get('short.clientId');
-                    var client_secret = properties.get('short.clientSecret');
-                    var query = encodeURI(data.file_url);
-
-                    var api_url = 'https://naveropenapi.apigw.ntruss.com/util/v1/shorturl';
-                    
-                    const axios = require('axios');
-
-                    try {
-
-                        const res = await axios.get(api_url, {
-                            headers: {
-                                'X-NCP-APIGW-API-KEY-ID': client_id, 
-                                'X-NCP-APIGW-API-KEY': client_secret
-                            },
-                            params: {
-                                url: query
-                            }
-                        });
-
-                        if (res.status === 200) {
-                            console.log(res.data);
-                            data.shortUrl = res.data.result.url;
-                        } else {
-                            console.log('Error creating short URL:', err.response ? err.response.data : err.message);
-                        }
-
-                    }catch(err) {
-                        console.log(err);
-                    }
-
-                    data.fileUUid = uuid;
-                    data.fileType = 'video';
-
-                    console.log(data);
-
-                     //db에 chat저장
-                    try {
-                            // 현재 날짜 객체 생성
-                            const currentDate = new Date();
-
-                            // 원하는 형식으로 날짜 문자열 생성
-                            //const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')} 00:00:00`;
-                            //const formattedDate = currentDate.toISOString();
-                            const formattedDate = `${currentDate.getFullYear()}-${(currentDate.getMonth() + 1).toString().padStart(2, '0')}-${currentDate.getDate().toString().padStart(2, '0')} ${currentDate.getHours().toString().padStart(2, '0')}:${currentDate.getMinutes().toString().padStart(2, '0')}:${currentDate.getSeconds().toString().padStart(2, '0')}`;
-
-                            data.date = formattedDate;
-
-                            if(data.chat_contents == null || data.chat_contents == undefined) {
-                                data.chat_contents = '';
-                            }
-
-                            const chat = new Chat({
-                                    server_name : data.room,
-                                    chat_nickname : data.nick,
-                                    chat_contents : '',
-                                    chat_data : formattedDate,
-                                    file_name : data.fileName,
-                                    file_uuid : data.fileUUid,
-                                    file_url : data.file_url,
-                                    file_short_url : data.shortUrl,
-                                    file_type : data.fileType
-                            });
-                            chat.save();
-                    } catch(err) {
-                        console.log(err);
-                    }
-
-                    io.to(data.room).emit('message', data);
-
-                }
-
-            });
-
         });
 
-    });
+        //https://kr.object.ncloudstorage.com/wewu-project-test/active/0f0071e6-6109-44c6-af45-32b640d4e5b7
+        const fileUrl = `${endpoint}/wewu-chat-test/${key_name}`;
 
+        const client_id = properties.get('short.clientId');
+        const client_secret = properties.get('short.clientSecret');
+        const query = encodeURI(fileUrl);
+
+        const api_url = 'https://naveropenapi.apigw.ntruss.com/util/v1/shorturl';
+        const axios = require('axios');
+
+        let shortUrl = fileUrl;
+        try {
+            const response = await axios.get(api_url, {
+                headers: {
+                    'X-NCP-APIGW-API-KEY-ID': client_id,
+                    'X-NCP-APIGW-API-KEY': client_secret
+                },
+                params: {
+                    url: query
+                }
+            });
+
+            if (response.status === 200) {
+                shortUrl = response.data.result.url;
+            }
+        } catch (err) {
+            console.error('Error creating short URL:', err);
+        }
+
+        const chat = new Chat({
+            server_name: room,
+            chat_nickname: nick,
+            chat_contents: msg || '',
+            file_name: file.originalname,
+            file_uuid: uuid,
+            file_url: fileUrl,
+            file_short_url: shortUrl,
+            file_type: 'video'
+        });
+        await chat.save();
+
+        io.to(room).emit('message', {
+            nick : nick,
+            msg : '',
+            fileName: file.originalname,
+            file_url: fileUrl,
+            file_short_url: shortUrl,
+            fileType: 'video',
+            date: new Date().toISOString()
+        });
+
+        console.log('end');
+
+        res.status(200).send('File uploaded and message sent');
+
+    } catch (err) {
+        console.error('File upload failed:', err);
+        res.status(500).send('File upload failed');
+    }
 });
 
 
