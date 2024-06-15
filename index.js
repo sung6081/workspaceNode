@@ -47,7 +47,8 @@ const io = socketIo(server, {
 });
 
 //mongoDB연결
-const mongoUri = 'mongodb://localhost:27017/chat'; // 로컬 MongoDB URI
+//const mongoUri = 'mongodb://localhost:27017/chat'; // 로컬 MongoDB URI
+const mongoUri = properties.get('mongo.uri');
 mongoose.connect(mongoUri)
     .then(() => console.log('MongoDB connected'))
     .catch((err) => console.log('MongoDB connection error:', err));
