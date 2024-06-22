@@ -83,6 +83,10 @@ const guNames = [
     "강동구"
 ];
 
+app.get('/', (req, res) => {
+    res.send('Hello World!');
+});
+
 //정적 파일 읽어오기
 //app.use(express.static(path.join(__dirname, 'public')));
 
