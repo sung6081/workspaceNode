@@ -8,8 +8,8 @@ const properties = PropertiestReader('common.properties');
 const app = express();
 
 //mongoDB연결
-const mongoUri = 'mongodb://127.0.0.1:27017/chat'; // 로컬 MongoDB URI
-//const mongoUri = properties.get('mongo.uri');
+//const mongoUri = 'mongodb://127.0.0.1:27017/chat'; // 로컬 MongoDB URI
+const mongoUri = properties.get('mongo.uri');
 mongoose.connect(mongoUri)
     .then(() => console.log('MongoDB connected'))
     .catch((err) => console.log('MongoDB connection error:', err));
@@ -34,9 +34,9 @@ const pers = 0;
 // 각 구 이름을 데이터베이스에 삽입
 guNames.forEach(async guName => {
 
-    const allServers = Server.find();
+    const allServers = await Server.find();
 
-    if(allServers != []) {
+    if(allServers.length != 0) {
         return;
     }
 
@@ -51,6 +51,32 @@ guNames.forEach(async guName => {
         console.error(`Failed to insert ${guName}:`, err);
     }
 });
+
+const checkAndMakeServer = async () => {
+
+    const allServers = await Server.find();
+
+    if(allServers.length == 0) {
+
+        const pers = 0;
+        guNames.forEach(async guName => {
+            try {
+                const server = new Server({
+                    server_name: guName,
+                    server_pers: pers
+                });
+                await server.save();
+                console.log(`Inserted ${guName} with ${pers} persons`);
+            } catch (err) {
+                console.error(`Failed to insert ${guName}:`, err);
+            }
+        });
+
+    }
+}
+
+checkAndMakeServer();
+
 
 const port = process.env.PORT || 3000;
 app.listen(port, () => {

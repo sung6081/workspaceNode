@@ -89,9 +89,9 @@ app.get('/', (req, res) => {
 
 const checkAndMakeServer = async () => {
 
-    const allServers = Server.find();
+    const allServers = await Server.find();
 
-    if(allServers == []) {
+    if(allServers.length == 0) {
 
         const pers = 0;
         guNames.forEach(async guName => {
