@@ -16,7 +16,11 @@ const app = express();
 //properties file 읽어오기
 const properties = PropertiestReader('common.properties');
 
-app.use(cors());
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(bodyParser.json());
 
 const upload = multer({ 
