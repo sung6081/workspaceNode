@@ -45,10 +45,12 @@ app.get('/listServer', async (req, res) => {
 const server = http.createServer(app);
 const io = socketIo(server, {
     cors: {
-        origin: "*",
-        methods: ["GET", "POST"]
+        origin: "http://localhost:8080", // 또는 클라이언트 주소
+        methods: ["GET", "POST"],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+        credentials: true
     },
-    path: '/chat'
+    path: '/chat/io'
 });
 
 //mongoDB연결
