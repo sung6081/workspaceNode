@@ -49,8 +49,7 @@ const io = socketIo(server, {
         methods: ["GET", "POST"],
         allowedHeaders: ['Content-Type', 'Authorization'],
         credentials: true
-    },
-    path: '/chat/io'
+    }
 });
 
 //mongoDB연결
