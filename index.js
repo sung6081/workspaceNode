@@ -87,9 +87,9 @@ const guNames = [
     "강동구"
 ];
 
-app.get('/', (req, res) => {
-    res.send('Hello World!');
-});
+// app.get('/', (req, res) => {
+//     res.send('Hello World!');
+// });
 
 const checkAndMakeServer = async () => {
 
