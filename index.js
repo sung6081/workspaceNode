@@ -47,7 +47,8 @@ const io = socketIo(server, {
     cors: {
         origin: "*",
         methods: ["GET", "POST"]
-    }
+    },
+    path: '/chat'
 });
 
 //mongoDB연결
