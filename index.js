@@ -28,7 +28,7 @@ const upload = multer({
     limits: { fileSize: 200 * 1024 * 1024 }
 });
 
-app.get('/listServer', async (req, res) => {
+app.get('/chatting/listServer', async (req, res) => {
 
     try {
         // 서버 모델에서 모든 서버 목록을 조회
@@ -49,7 +49,8 @@ const io = socketIo(server, {
         methods: ["GET", "POST"],
         allowedHeaders: ['Content-Type', 'Authorization'],
         credentials: true
-    }
+    },
+    path: '/chatting'
 });
 
 //mongoDB연결
@@ -360,7 +361,7 @@ io.on('connection', (socket) => {
 
 });
 
-app.post('/upload', upload.single('video'), async (req, res) => {
+app.post('/chatting/upload', upload.single('video'), async (req, res) => {
 
     console.log('upload_video');
 
