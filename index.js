@@ -45,7 +45,7 @@ app.get('/listServer', async (req, res) => {
 const server = http.createServer(app);
 const io = socketIo(server, {
     cors: {
-        origin: "http://localhost:8080", // 또는 클라이언트 주소
+        origin: "*", // 또는 클라이언트 주소
         methods: ["GET", "POST"],
         allowedHeaders: ['Content-Type', 'Authorization'],
         credentials: true
