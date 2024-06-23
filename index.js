@@ -87,6 +87,25 @@ app.get('/', (req, res) => {
     res.send('Hello World!');
 });
 
+const allServers = await Server.find();
+if(allServers.length == 0) {
+
+    const pers = 0;
+    guNames.forEach(async guName => {
+        try {
+            const server = new Server({
+                server_name: guName,
+                server_pers: pers
+            });
+            await server.save();
+            console.log(`Inserted ${guName} with ${pers} persons`);
+        } catch (err) {
+            console.error(`Failed to insert ${guName}:`, err);
+        }
+    });
+
+}
+
 //정적 파일 읽어오기
 //app.use(express.static(path.join(__dirname, 'public')));
 
