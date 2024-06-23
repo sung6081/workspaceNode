@@ -24,7 +24,7 @@ const upload = multer({
     limits: { fileSize: 200 * 1024 * 1024 }
 });
 
-app.get('/listServer', async (req, res) => {
+app.get('/chat/listServer', async (req, res) => {
 
     try {
         // 서버 모델에서 모든 서버 목록을 조회
@@ -354,7 +354,7 @@ io.on('connection', (socket) => {
 
 });
 
-app.post('/upload', upload.single('video'), async (req, res) => {
+app.post('/chat/upload', upload.single('video'), async (req, res) => {
 
     console.log('upload_video');
 
